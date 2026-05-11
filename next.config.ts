@@ -1,10 +1,16 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 import createNextIntlPlugin from "next-intl/plugin";
 import { redirects as redirectRules } from "./src/lib/redirects";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  // Pin Turbopack's workspace root to this project so Next doesn't get
+  // confused by a parent directory's lockfile.
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   images: {
     // Remote image domains allowed by next/image. Add the hostname your
     // Medusa backend uses if it isn't covered here.

@@ -5,9 +5,11 @@ import {
   categoryRepository,
   brandRepository,
 } from "@/lib/repositories"
+import { sdk } from "@/lib/medusa"
 
-// Static public routes. Admin, account, auth, and checkout are excluded
-// (covered by robots.txt disallow rules).
+// Static public routes. Admin (the Medusa backend), account, auth, and
+// checkout are intentionally excluded — they're handled by robots.txt's
+// disallow rules and aren't useful for indexing.
 const STATIC_PATHS = [
   { path: "", priority: 1, changeFrequency: "daily" as const },
   { path: "/shop", priority: 0.9, changeFrequency: "daily" as const },
@@ -23,49 +25,75 @@ const STATIC_PATHS = [
   { path: "/policies/terms", priority: 0.3, changeFrequency: "yearly" as const },
 ]
 
+async function getCountryCodes(): Promise<string[]> {
+  try {
+    const { regions } = await sdk.store.region.list({})
+    const codes = new Set<string>()
+    for (const r of regions) {
+      for (const c of r.countries ?? []) {
+        if (c.iso_2) codes.add(c.iso_2.toLowerCase())
+      }
+    }
+    return codes.size > 0 ? [...codes].sort() : ["us"]
+  } catch {
+    return ["us"]
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Fetch all dynamic content from the repository layer so swapping
-  // backends (CMS, DB, API) doesn't break the sitemap.
-  const [productsResult, categories, brands] = await Promise.all([
+  const [productsResult, categories, brands, countryCodes] = await Promise.all([
     productRepository.list(undefined, undefined, { page: 1, limit: 10_000 }),
     categoryRepository.list(),
     brandRepository.list(),
+    getCountryCodes(),
   ])
 
   const now = new Date()
+  const base = siteConfig.url.replace(/\/$/, "")
 
-  const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((p) => ({
-    url: `${siteConfig.url}${p.path}`,
-    lastModified: now,
-    changeFrequency: p.changeFrequency,
-    priority: p.priority,
-  }))
+  const entries: MetadataRoute.Sitemap = []
 
-  const productEntries: MetadataRoute.Sitemap = productsResult.items.map((p) => ({
-    url: `${siteConfig.url}/${p.slug}`,
-    lastModified: p.updatedAt ? new Date(p.updatedAt) : now,
-    changeFrequency: "weekly",
-    priority: 0.8,
-  }))
+  for (const country of countryCodes) {
+    // Static routes per country
+    for (const p of STATIC_PATHS) {
+      entries.push({
+        url: `${base}/${country}${p.path}`,
+        lastModified: now,
+        changeFrequency: p.changeFrequency,
+        priority: p.priority,
+      })
+    }
 
-  const categoryEntries: MetadataRoute.Sitemap = categories.map((c) => ({
-    url: `${siteConfig.url}/${c.slug}`,
-    lastModified: now,
-    changeFrequency: "weekly",
-    priority: c.parentId ? 0.6 : 0.8,
-  }))
+    // Products
+    for (const p of productsResult.items) {
+      entries.push({
+        url: `${base}/${country}/${p.slug}`,
+        lastModified: p.updatedAt ? new Date(p.updatedAt) : now,
+        changeFrequency: "weekly",
+        priority: 0.8,
+      })
+    }
 
-  const brandEntries: MetadataRoute.Sitemap = brands.map((b) => ({
-    url: `${siteConfig.url}/${b.slug}`,
-    lastModified: now,
-    changeFrequency: "weekly",
-    priority: 0.6,
-  }))
+    // Categories
+    for (const c of categories) {
+      entries.push({
+        url: `${base}/${country}/${c.slug}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: c.parentId ? 0.6 : 0.8,
+      })
+    }
 
-  return [
-    ...staticEntries,
-    ...productEntries,
-    ...categoryEntries,
-    ...brandEntries,
-  ]
+    // Brands (derived from product types)
+    for (const b of brands) {
+      entries.push({
+        url: `${base}/${country}/${b.slug}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 0.6,
+      })
+    }
+  }
+
+  return entries
 }

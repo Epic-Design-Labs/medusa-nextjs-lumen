@@ -9,6 +9,7 @@ import { StarRating } from "@/components/products/star-rating"
 import { formatPrice } from "@/lib/utils"
 import { PLACEHOLDER_IMAGE } from "@/lib/constants"
 import { useWishlistStore } from "@/store/wishlist"
+import { useCountryLink } from "@/hooks/use-country-link"
 import { toast } from "sonner"
 import type { Product } from "@/types"
 
@@ -17,6 +18,11 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const link = useCountryLink()
+  const wishlistItems = useWishlistStore((s) => s.items)
+  const addItem = useWishlistStore((s) => s.addItem)
+  const removeItem = useWishlistStore((s) => s.removeItem)
+
   const defaultVariant = product.variants[0]
   if (!defaultVariant) return null
 
@@ -24,10 +30,6 @@ export function ProductCard({ product }: ProductCardProps) {
   const compareAtPrice = defaultVariant.compareAtPrice
   const isOnSale = compareAtPrice && compareAtPrice > price
   const image = product.images[0]
-
-  const wishlistItems = useWishlistStore((s) => s.items)
-  const addItem = useWishlistStore((s) => s.addItem)
-  const removeItem = useWishlistStore((s) => s.removeItem)
 
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
@@ -52,7 +54,7 @@ export function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <Link href={`/${product.slug}`} className="group">
+    <Link href={link(`/${product.slug}`)} className="group">
       <div className="relative aspect-square overflow-hidden rounded-lg bg-neutral-100">
         <Image
           src={image?.url ?? PLACEHOLDER_IMAGE}

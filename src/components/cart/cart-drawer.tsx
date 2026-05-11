@@ -14,6 +14,7 @@ import {
 import { CartItem } from "./cart-item"
 import { useCartStore } from "@/store/cart"
 import { formatPrice } from "@/lib/utils"
+import { useCountryLink } from "@/hooks/use-country-link"
 
 export function CartDrawer() {
   const cart = useCartStore((s) => s.cart)
@@ -21,6 +22,7 @@ export function CartDrawer() {
   const closeCart = useCartStore((s) => s.closeCart)
   const hydrate = useCartStore((s) => s.hydrate)
   const hasHydrated = useCartStore((s) => s.hasHydrated)
+  const link = useCountryLink()
 
   // Hydrate the cart once on mount so a returning visitor sees their items.
   useEffect(() => {
@@ -62,7 +64,7 @@ export function CartDrawer() {
               Add items to get started
             </p>
             <Button className="mt-6" onClick={closeCart} asChild>
-              <Link href="/shop">Continue Shopping</Link>
+              <Link href={link("/shop")}>Continue Shopping</Link>
             </Button>
           </div>
         ) : (
@@ -85,7 +87,7 @@ export function CartDrawer() {
                   Shipping and taxes calculated at checkout.
                 </p>
                 <Button className="w-full" size="lg" asChild onClick={closeCart}>
-                  <Link href="/checkout">Checkout</Link>
+                  <Link href={link("/checkout")}>Checkout</Link>
                 </Button>
                 <button
                   className="mb-4 w-full py-2 text-center text-sm text-muted-foreground underline hover:text-foreground sm:mb-0 sm:hidden"

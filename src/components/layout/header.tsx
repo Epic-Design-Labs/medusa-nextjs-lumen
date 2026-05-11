@@ -20,6 +20,7 @@ import type { Category } from "@/types"
 import { useCartStore } from "@/store/cart"
 import { useAuthStore } from "@/store/auth"
 import { useRouter } from "next/navigation"
+import { useCountryLink } from "@/hooks/use-country-link"
 
 interface HeaderProps {
   /** All categories (top-level + subcategories) from the repository layer */
@@ -41,6 +42,7 @@ export function Header({ categories = [] }: HeaderProps) {
   const hydrateAuth = useAuthStore((s) => s.hydrate)
   const logout = useAuthStore((s) => s.logout)
   const router = useRouter()
+  const link = useCountryLink()
 
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
@@ -128,7 +130,7 @@ export function Header({ categories = [] }: HeaderProps) {
                             {subcats.map((sub) => (
                               <Link
                                 key={sub.id}
-                                href={`/${sub.slug}`}
+                                href={link(`/${sub.slug}`)}
                                 className="py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                                 onClick={() => setMobileMenuOpen(false)}
                               >
@@ -148,7 +150,7 @@ export function Header({ categories = [] }: HeaderProps) {
         </Sheet>
 
         {/* Logo */}
-        <Link href="/" className="text-xl font-semibold tracking-tight">
+        <Link href={link("/")} className="text-xl font-semibold tracking-tight">
           {siteConfig.name}
         </Link>
 
@@ -176,7 +178,7 @@ export function Header({ categories = [] }: HeaderProps) {
           </button>
 
           <Link
-            href="/wishlist"
+            href={link("/wishlist")}
             className="hidden h-10 w-10 items-center justify-center rounded-md hover:bg-accent lg:inline-flex"
             aria-label={t("wishlist")}
           >
@@ -204,17 +206,17 @@ export function Header({ categories = [] }: HeaderProps) {
                   <p className="text-xs text-muted-foreground">{customer?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/account")}>
+                <DropdownMenuItem onClick={() => router.push(link("/account"))}>
                   {tCommon("signIn")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/account/orders")}>
+                <DropdownMenuItem onClick={() => router.push(link("/account/orders"))}>
                   {tCommon("orders")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/account/settings")}>
+                <DropdownMenuItem onClick={() => router.push(link("/account/settings"))}>
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={async () => { await logout(); router.push("/") }}>
+                <DropdownMenuItem onClick={async () => { await logout(); router.push(link("/")) }}>
                   <LogOut className="mr-2 h-4 w-4" />
                   {tCommon("signOut")}
                 </DropdownMenuItem>
@@ -222,7 +224,7 @@ export function Header({ categories = [] }: HeaderProps) {
             </DropdownMenu>
           ) : (
             <Link
-              href="/auth/login"
+              href={link("/auth/login")}
               className="hidden h-10 w-10 items-center justify-center rounded-md hover:bg-accent lg:inline-flex"
               aria-label={tCommon("signIn")}
             >
