@@ -71,8 +71,8 @@ export default async function HomePage({ params }: HomePageProps) {
           </p>
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
             <Button size="lg" asChild>
-              <Link href={`/${countryCode}/shop`}>
-                Browse the demo
+              <Link href={`/${countryCode}/about`}>
+                Learn more
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
