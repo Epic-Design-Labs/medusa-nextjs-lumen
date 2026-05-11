@@ -166,3 +166,154 @@ export function clearLocalCart() {
 }
 
 export const CART_COOKIE_NAME = CART_COOKIE
+
+// =============================================================================
+// Checkout (Phase 4)
+// =============================================================================
+
+export interface CheckoutAddress {
+  first_name: string
+  last_name: string
+  address_1: string
+  address_2?: string
+  city: string
+  province?: string
+  postal_code: string
+  country_code: string
+  phone?: string
+  company?: string
+}
+
+function requireCartId(): string {
+  const id = readCookie(CART_COOKIE)
+  if (!id) throw new Error("No cart")
+  return id
+}
+
+/**
+ * Set contact email + shipping (and optionally billing) address on the cart.
+ * If `billing_address` is omitted, billing mirrors shipping.
+ */
+export async function updateCartContact(args: {
+  email: string
+  shipping_address: CheckoutAddress
+  billing_address?: CheckoutAddress
+}): Promise<Cart> {
+  const id = requireCartId()
+  const { cart } = await sdk.store.cart.update(id, {
+    email: args.email,
+    shipping_address: args.shipping_address,
+    billing_address: args.billing_address ?? args.shipping_address,
+  })
+  const fresh = await fetchExistingCart(cart.id)
+  return transform(fresh ?? cart)
+}
+
+export interface ShippingOption {
+  id: string
+  name: string
+  amount: number
+  priceType: string
+}
+
+export async function listShippingOptions(): Promise<ShippingOption[]> {
+  const id = requireCartId()
+  const { shipping_options } = await sdk.store.fulfillment.listCartOptions({
+    cart_id: id,
+  })
+  return shipping_options.map((o) => ({
+    id: o.id,
+    name: o.name ?? "",
+    amount: o.amount ?? 0,
+    priceType: o.price_type ?? "flat",
+  }))
+}
+
+export async function addShippingMethod(optionId: string): Promise<Cart> {
+  const id = requireCartId()
+  const { cart } = await sdk.store.cart.addShippingMethod(id, {
+    option_id: optionId,
+  })
+  const fresh = await fetchExistingCart(cart.id)
+  return transform(fresh ?? cart)
+}
+
+export interface PaymentProviderInfo {
+  id: string
+  isEnabled: boolean
+}
+
+export async function listPaymentProviders(): Promise<PaymentProviderInfo[]> {
+  const id = requireCartId()
+  // Pull region_id from cart so we filter providers correctly.
+  const cart = await fetchExistingCart(id)
+  const regionId = cart?.region_id
+  if (!regionId) return []
+  const { payment_providers } = await sdk.store.payment.listPaymentProviders({
+    region_id: regionId,
+  })
+  return payment_providers.map((p) => ({
+    id: p.id,
+    isEnabled: (p as { is_enabled?: boolean }).is_enabled ?? true,
+  }))
+}
+
+/**
+ * Create a payment collection for the cart (if needed) and initiate a payment
+ * session with the chosen provider. Returns the updated cart with the session.
+ */
+export async function initiatePaymentSession(
+  providerId: string
+): Promise<Cart> {
+  const id = requireCartId()
+  const cart = await fetchExistingCart(id)
+  if (!cart) throw new Error("Cart not found")
+
+  // Use the SDK's helper which creates the payment collection + session.
+  const { payment_collection } = await sdk.store.payment.initiatePaymentSession(
+    cart as HttpTypes.StoreCart,
+    { provider_id: providerId }
+  )
+  // payment_collection is attached; refetch cart for the up-to-date view.
+  void payment_collection
+  const fresh = await fetchExistingCart(id)
+  return transform(fresh ?? cart)
+}
+
+/**
+ * Complete the cart. Returns either an order (success) or a cart (failure
+ * with details on what went wrong).
+ */
+export async function completeCart(): Promise<
+  | { type: "order"; order: HttpTypes.StoreOrder }
+  | { type: "cart"; cart: Cart; error?: string }
+> {
+  const id = requireCartId()
+  const result = await sdk.store.cart.complete(id)
+  if (result.type === "order") {
+    clearCookie(CART_COOKIE)
+    return { type: "order", order: result.order }
+  }
+  const fresh = await fetchExistingCart(id)
+  return {
+    type: "cart",
+    cart: transform(fresh ?? (result.cart as StoreCart)),
+    error: result.error?.message,
+  }
+}
+
+/**
+ * Retrieve an order by ID (used by the success page).
+ */
+export async function retrieveOrder(
+  orderId: string
+): Promise<HttpTypes.StoreOrder | null> {
+  try {
+    const { order } = await sdk.store.order.retrieve(orderId, {
+      fields: "*items,*items.variant,*items.variant.product,*shipping_address,*billing_address",
+    })
+    return order
+  } catch {
+    return null
+  }
+}
