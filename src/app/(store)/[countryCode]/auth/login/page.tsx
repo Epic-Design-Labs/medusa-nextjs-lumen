@@ -2,17 +2,20 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AuthCardLayout } from "@/components/auth/auth-card-layout"
 import { useAuthStore } from "@/store/auth"
+import { AuthError } from "@/lib/auth-client"
 import { toast } from "sonner"
 import { loginSchema } from "@/lib/validators"
 
 export default function LoginPage() {
   const router = useRouter()
+  const params = useParams<{ countryCode: string }>()
+  const countryCode = params?.countryCode ?? "us"
   const login = useAuthStore((s) => s.login)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -26,14 +29,17 @@ export default function LoginPage() {
       return
     }
     setLoading(true)
-    const success = login(email, password)
-    if (success) {
+    try {
+      await login(email, password)
       toast.success("Welcome back!")
-      router.push("/account")
-    } else {
-      toast.error("Invalid email or password")
+      router.push(`/${countryCode}/account`)
+    } catch (err) {
+      const message =
+        err instanceof AuthError ? err.message : "Invalid email or password"
+      toast.error(message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -62,13 +68,6 @@ export default function LoginPage() {
           {loading ? "Signing in..." : "Sign In"}
         </Button>
       </form>
-      <div className="mt-4 rounded-md bg-neutral-50 p-3">
-        <p className="text-xs text-muted-foreground">
-          <strong>Demo accounts:</strong><br />
-          admin@example.com / password123<br />
-          demo@example.com / password123
-        </p>
-      </div>
     </AuthCardLayout>
   )
 }

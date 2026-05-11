@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import type { HttpTypes } from "@medusajs/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,18 +11,43 @@ import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { MapPin, Plus, Trash2 } from "lucide-react"
 import { useAuthGuard } from "@/hooks/use-auth-guard"
-import { useAuthStore } from "@/store/auth"
+import {
+  listMyAddresses,
+  addMyAddress,
+  deleteMyAddress,
+} from "@/lib/customer-client"
 import { toast } from "sonner"
 
+type Address = HttpTypes.StoreCustomerAddress
+
+const EMPTY_FORM = {
+  first_name: "",
+  last_name: "",
+  address_1: "",
+  address_2: "",
+  city: "",
+  province: "",
+  postal_code: "",
+  country_code: "us",
+}
+
 export default function AddressesPage() {
-  const { user, isReady } = useAuthGuard()
-  const addAddress = useAuthStore((s) => s.addAddress)
-  const removeAddress = useAuthStore((s) => s.removeAddress)
+  const { isReady } = useAuthGuard()
+  const [addresses, setAddresses] = useState<Address[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({
-    firstName: "", lastName: "", line1: "", line2: "",
-    city: "", state: "", postalCode: "", country: "US",
-  })
+  const [form, setForm] = useState({ ...EMPTY_FORM })
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!isReady) return
+    let cancelled = false
+    listMyAddresses().then((a) => {
+      if (!cancelled) setAddresses(a)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isReady])
 
   if (!isReady) return null
 
@@ -29,26 +55,42 @@ export default function AddressesPage() {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
   }
 
-  function handleAdd(e: React.FormEvent) {
+  async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    addAddress({
-      type: "shipping",
-      firstName: form.firstName,
-      lastName: form.lastName,
-      line1: form.line1,
-      line2: form.line2 || undefined,
-      city: form.city,
-      state: form.state,
-      postalCode: form.postalCode,
-      country: form.country,
-      isDefault: (user?.addresses.length ?? 0) === 0,
-    })
-    toast.success("Address added")
-    setShowForm(false)
-    setForm({ firstName: "", lastName: "", line1: "", line2: "", city: "", state: "", postalCode: "", country: "US" })
+    setSubmitting(true)
+    try {
+      const next = await addMyAddress({
+        first_name: form.first_name,
+        last_name: form.last_name,
+        address_1: form.address_1,
+        address_2: form.address_2 || undefined,
+        city: form.city,
+        province: form.province || undefined,
+        postal_code: form.postal_code,
+        country_code: form.country_code.toLowerCase(),
+        is_default_shipping: addresses.length === 0,
+      })
+      setAddresses(next)
+      toast.success("Address added")
+      setShowForm(false)
+      setForm({ ...EMPTY_FORM })
+    } catch (err) {
+      console.error(err)
+      toast.error("Couldn't save address")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const addresses = user?.addresses ?? []
+  async function handleRemove(id: string) {
+    try {
+      await deleteMyAddress(id)
+      setAddresses((cur) => cur.filter((a) => a.id !== id))
+      toast("Address removed")
+    } catch {
+      toast.error("Couldn't remove address")
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
@@ -66,29 +108,46 @@ export default function AddressesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>First name</Label>
-                  <Input name="firstName" value={form.firstName} onChange={handleChange} required />
+                  <Input name="first_name" value={form.first_name} onChange={handleChange} required />
                 </div>
                 <div className="space-y-2">
                   <Label>Last name</Label>
-                  <Input name="lastName" value={form.lastName} onChange={handleChange} required />
+                  <Input name="last_name" value={form.last_name} onChange={handleChange} required />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Address</Label>
-                <Input name="line1" value={form.line1} onChange={handleChange} required />
+                <Label>Address line 1</Label>
+                <Input name="address_1" value={form.address_1} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
-                <Label>Apt, suite (optional)</Label>
-                <Input name="line2" value={form.line2} onChange={handleChange} />
+                <Label>Address line 2 (optional)</Label>
+                <Input name="address_2" value={form.address_2} onChange={handleChange} />
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>City</Label><Input name="city" value={form.city} onChange={handleChange} required /></div>
-                <div className="space-y-2"><Label>State</Label><Input name="state" value={form.state} onChange={handleChange} required /></div>
-                <div className="space-y-2"><Label>ZIP</Label><Input name="postalCode" value={form.postalCode} onChange={handleChange} required /></div>
+                <div className="space-y-2">
+                  <Label>City</Label>
+                  <Input name="city" value={form.city} onChange={handleChange} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>State / Province</Label>
+                  <Input name="province" value={form.province} onChange={handleChange} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Postal code</Label>
+                  <Input name="postal_code" value={form.postal_code} onChange={handleChange} required />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Country (ISO-2)</Label>
+                <Input name="country_code" value={form.country_code} onChange={handleChange} required />
               </div>
               <div className="flex gap-2">
-                <Button type="submit">Save Address</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Saving…" : "Save Address"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                  Cancel
+                </Button>
               </div>
             </form>
           </CardContent>
@@ -110,18 +169,29 @@ export default function AddressesPage() {
               <CardContent className="flex items-start justify-between pt-6">
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{addr.firstName} {addr.lastName}</p>
-                    {addr.isDefault && <Badge variant="secondary" className="text-xs">Default</Badge>}
+                    <p className="text-sm font-medium">
+                      {addr.first_name} {addr.last_name}
+                    </p>
+                    {addr.is_default_shipping && (
+                      <Badge variant="secondary" className="text-xs">
+                        Default shipping
+                      </Badge>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}<br />
-                    {addr.city}, {addr.state} {addr.postalCode}
+                    {addr.address_1}
+                    {addr.address_2 ? `, ${addr.address_2}` : ""}
+                    <br />
+                    {addr.city}
+                    {addr.province ? `, ${addr.province}` : ""} {addr.postal_code}
+                    <br />
+                    {addr.country_code?.toUpperCase()}
                   </p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => { removeAddress(addr.id); toast("Address removed") }}
+                  onClick={() => handleRemove(addr.id)}
                   aria-label="Remove address"
                 >
                   <Trash2 className="h-4 w-4" />

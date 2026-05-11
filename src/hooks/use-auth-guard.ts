@@ -1,27 +1,36 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { useRouter, useParams } from "next/navigation"
 import { useAuthStore } from "@/store/auth"
 
+/**
+ * Client-side gate for account pages. Triggers a hydrate on mount and
+ * redirects to the login page if no customer is authenticated.
+ */
 export function useAuthGuard() {
-  const user = useAuthStore((s) => s.user)
+  const customer = useAuthStore((s) => s.customer)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const hasHydrated = useAuthStore((s) => s.hasHydrated)
+  const hydrate = useAuthStore((s) => s.hydrate)
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
+  const params = useParams<{ countryCode?: string }>()
+  const countryCode = params?.countryCode ?? "us"
 
   useEffect(() => {
-    if (mounted && !isAuthenticated) {
-      router.push("/auth/login")
+    if (!hasHydrated) void hydrate()
+  }, [hasHydrated, hydrate])
+
+  useEffect(() => {
+    if (hasHydrated && !isAuthenticated) {
+      router.replace(`/${countryCode}/auth/login`)
     }
-  }, [mounted, isAuthenticated, router])
+  }, [hasHydrated, isAuthenticated, router, countryCode])
 
   return {
-    user,
+    customer,
     isAuthenticated,
-    isLoading: !mounted,
-    isReady: mounted && isAuthenticated,
+    isLoading: !hasHydrated,
+    isReady: hasHydrated && isAuthenticated,
   }
 }

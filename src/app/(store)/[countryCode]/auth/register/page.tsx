@@ -1,17 +1,20 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AuthCardLayout } from "@/components/auth/auth-card-layout"
 import { useAuthStore } from "@/store/auth"
+import { AuthError } from "@/lib/auth-client"
 import { toast } from "sonner"
 import { registerSchema } from "@/lib/validators"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const params = useParams<{ countryCode: string }>()
+  const countryCode = params?.countryCode ?? "us"
   const register = useAuthStore((s) => s.register)
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", password: "", confirmPassword: "",
@@ -27,10 +30,22 @@ export default function RegisterPage() {
     const validation = registerSchema.safeParse(form)
     if (!validation.success) { toast.error(validation.error.issues[0].message); return }
     setLoading(true)
-    const success = register({ firstName: form.firstName, lastName: form.lastName, email: form.email, password: form.password })
-    if (success) { toast.success("Account created!"); router.push("/account") }
-    else { toast.error("An account with this email already exists") }
-    setLoading(false)
+    try {
+      await register({
+        first_name: form.firstName,
+        last_name: form.lastName,
+        email: form.email,
+        password: form.password,
+      })
+      toast.success("Account created!")
+      router.push(`/${countryCode}/account`)
+    } catch (err) {
+      const message =
+        err instanceof AuthError ? err.message : "Could not create account"
+      toast.error(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

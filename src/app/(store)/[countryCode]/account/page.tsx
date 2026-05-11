@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/ui/page-header"
@@ -17,16 +17,28 @@ const accountLinks = [
 ]
 
 export default function AccountPage() {
-  const { user, isReady } = useAuthGuard()
+  const { customer, isReady } = useAuthGuard()
   const logout = useAuthStore((s) => s.logout)
   const router = useRouter()
+  const params = useParams<{ countryCode: string }>()
+  const countryCode = params?.countryCode ?? "us"
 
-  if (!isReady) return null
+  if (!isReady || !customer) return null
+
+  const greeting = customer.first_name
+    ? `Welcome back, ${customer.first_name}!`
+    : `Welcome back, ${customer.email}!`
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-      <PageHeader title="My Account" description={`Welcome back, ${user?.firstName}!`}>
-        <Button variant="outline" onClick={() => { logout(); router.push("/") }}>
+      <PageHeader title="My Account" description={greeting}>
+        <Button
+          variant="outline"
+          onClick={async () => {
+            await logout()
+            router.push(`/${countryCode}`)
+          }}
+        >
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </Button>

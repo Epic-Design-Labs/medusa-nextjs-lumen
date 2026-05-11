@@ -35,14 +35,20 @@ export function Header({ categories = [] }: HeaderProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const openCart = useCartStore((s) => s.openCart)
   const getItemCount = useCartStore((s) => s.getItemCount)
-  const user = useAuthStore((s) => s.user)
+  const customer = useAuthStore((s) => s.customer)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const hasAuthHydrated = useAuthStore((s) => s.hasHydrated)
+  const hydrateAuth = useAuthStore((s) => s.hydrate)
   const logout = useAuthStore((s) => s.logout)
   const router = useRouter()
 
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   const itemCount = mounted ? getItemCount() : 0
+
+  useEffect(() => {
+    if (mounted && !hasAuthHydrated) void hydrateAuth()
+  }, [mounted, hasAuthHydrated, hydrateAuth])
 
   // Cmd+K / Ctrl+K to open search
   useEffect(() => {
@@ -185,13 +191,17 @@ export function Header({ categories = [] }: HeaderProps) {
                 aria-label={t("accountMenu")}
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-xs font-medium text-background">
-                  {user?.firstName?.[0] ?? "U"}
+                  {customer?.first_name?.[0] ?? customer?.email?.[0]?.toUpperCase() ?? "U"}
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  <p className="text-sm font-medium">
+                    {customer?.first_name || customer?.last_name
+                      ? `${customer?.first_name ?? ""} ${customer?.last_name ?? ""}`.trim()
+                      : customer?.email}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{customer?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push("/account")}>
@@ -204,7 +214,7 @@ export function Header({ categories = [] }: HeaderProps) {
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => { logout(); router.push("/") }}>
+                <DropdownMenuItem onClick={async () => { await logout(); router.push("/") }}>
                   <LogOut className="mr-2 h-4 w-4" />
                   {tCommon("signOut")}
                 </DropdownMenuItem>
