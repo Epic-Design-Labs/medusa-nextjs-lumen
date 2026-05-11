@@ -1,158 +1,149 @@
-# Next.js Ecommerce Starter
+# Lumen
 
-A free, open-source, production-ready ecommerce starter template built with **Next.js**, **Tailwind CSS**, and **shadcn/ui**. Designed to work standalone or connect to any checkout/payment system.
+A modern Next.js storefront starter for **[Medusa](https://medusajs.com)**. Deploys natively to **Medusa Cloud** or **Vercel** — same code, same env vars.
 
-**[Live Demo](https://nextjsecommercestarter.com)** · **[Documentation](docs/CUSTOMIZATION.md)** · **[Report Issue](https://github.com/Epic-Design-Labs/nextjs-ecommerce-starter/issues)**
+Built by [Epic Design Labs](https://epicdesignlabs.com). MIT licensed.
 
-Built by [Epic Design Labs](https://epicdesignlabs.com)
+> Lumen is the visible layer that wraps your Medusa backend — named for the unit of light, because that's what a storefront is: the part your customers actually see.
 
-## Features
+---
 
-- **Product Catalog** — Browse, filter, sort, search across 14 demo products in 5 categories
-- **Shopping Cart** — Slide-out drawer, quantity controls, persisted to localStorage
-- **Wishlist** — Save products with heart icons, persisted to localStorage
-- **Checkout** — Full checkout flow with shipping form and order creation
-- **Authentication** — Login, register, forgot password with demo accounts
-- **Account** — Order history, saved addresses, profile settings
-- **Brands** — Brand pages with product filtering
-- **Subcategories** — Nested categories with accordion mobile menu
-- **Search** — Cmd+K modal with instant results and popular searches
-- **Announcement Bar** — Dismissible top banner, configurable in one file
-- **Recently Viewed** — Tracks and displays recently browsed products
-- **Back to Top** — Smooth scroll button on long pages
-- **SEO** — Dynamic metadata, Open Graph, canonical URLs, sitemap, robots.txt, structured data (Product, Organization, BreadcrumbList)
-- **Accessibility** — Skip-to-content, focus traps, ARIA labels, keyboard navigation, 44px touch targets
-- **i18n** — next-intl with English and Spanish translations
-- **Responsive** — Mobile-first design, 1440px max-width, full-width cart/menu on mobile
-- **Security** — CSP, HSTS, X-Frame-Options, and more via middleware
+## Why Lumen
 
-## Tech Stack
+- **Medusa-native.** Built on Medusa v2's official JS SDK. Cart, checkout, customer auth, regions, promotions, gift cards — all the native features, none of the rebuild.
+- **Cloud or Vercel.** No platform-specific dependencies in critical paths. Set `NEXT_PUBLIC_MEDUSA_BACKEND_URL` and deploy anywhere Next.js runs.
+- **Design-forward.** Built by a design agency. Modern visual system, full responsive design, real attention to detail.
+- **Production-grade defaults.** SEO, accessibility, security headers, i18n, structured data, sitemap, robots.txt — all wired in.
+- **Connector-friendly.** A clean repository layer that lets you swap in connectors (reviews, IMS, payment orchestrators, etc.) without forking the theme.
 
-- **Next.js 16** (App Router, React Server Components)
+## Tech stack
+
+- **Next.js 16** (App Router, React Server Components, Turbopack)
 - **TypeScript**
 - **Tailwind CSS v4** + **shadcn/ui**
-- **Zustand** (cart, wishlist, auth, orders — persisted to localStorage)
-- **Zod** (form validation)
-- **next-intl** (internationalization)
-- **Sonner** (toast notifications)
-- **Inter** (Google Font via next/font)
+- **@medusajs/js-sdk** v2
+- **Zustand** (client-side UI state — wishlist, recently viewed)
+- **Zod** (validation)
+- **next-intl** (i18n — English + Spanish out of the box)
 
-## Quick Start
+## Quick start
+
+Requires Node.js 20+ and a running Medusa v2 backend.
 
 ```bash
-# Requires Node.js 20+
-git clone https://github.com/Epic-Design-Labs/nextjs-ecommerce-starter.git
-cd nextjs-ecommerce-starter
+git clone https://github.com/Epic-Design-Labs/medusa-nextjs-lumen.git
+cd medusa-nextjs-lumen
+cp .env.example .env.local
+# Edit .env.local — fill in your backend URL + publishable key
 npm install
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Demo Accounts
+### Where do I get a Medusa backend?
 
-| Email | Password | Role |
-|-------|----------|------|
-| `admin@example.com` | `password123` | Admin |
-| `demo@example.com` | `password123` | Customer |
+Two paths:
 
-## Project Structure
+1. **Medusa Cloud** (recommended for quickstart) — sign up at [cloud.medusajs.com](https://cloud.medusajs.com), clone a starter, copy the backend URL and a publishable key from your admin into `.env.local`.
+2. **Self-host** — follow Medusa's [installation guide](https://docs.medusajs.com/learn/installation). Point Lumen at `http://localhost:9000` for local dev.
+
+## Required environment variables
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_MEDUSA_BACKEND_URL` | Your Medusa backend (e.g. `https://your-store.medusajs.app`) |
+| `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` | Publishable API key from your Medusa admin |
+
+Optional: `NEXT_PUBLIC_DEFAULT_REGION` (ISO-2, default `us`), `NEXT_PUBLIC_BASE_URL` (storefront origin for canonical URLs), `NEXT_PUBLIC_STRIPE_KEY` (only if using Stripe).
+
+See [`.env.example`](.env.example) for the full annotated list.
+
+## Features
+
+### Native Medusa support
+- **Catalog** — products, variants, options (size/color/etc.), collections, categories, product types
+- **Regions** — multi-country, multi-currency, region-driven pricing and tax
+- **Cart** — line items, variant selection, promotion codes, gift cards
+- **Checkout** — shipping address, shipping option, payment session, Stripe (default)
+- **Customer auth** — register, login, forgot password
+- **Account** — orders, order detail, addresses, profile, returns
+- **Search** — server-side product search
+
+### Storefront polish
+- Wishlist (localStorage-persisted)
+- Recently viewed
+- Cmd+K search modal
+- Dismissible announcement bar
+- Mobile-first responsive design
+- Full accessibility (WCAG AA): focus management, ARIA, skip-to-content, 44px touch targets
+- SEO: dynamic metadata, Open Graph, canonical URLs, sitemap, robots.txt, JSON-LD structured data
+- Security headers: CSP, HSTS, X-Frame-Options, Permissions-Policy via middleware
+- i18n with English + Spanish
+
+## Deployment
+
+### Medusa Cloud
+
+If you're already hosting your backend on Medusa Cloud:
+
+1. Push this repo to GitHub
+2. In Cloud → your project → connect the storefront to this repo
+3. Set the env vars on the storefront environment (Build: ON, Runtime: ON)
+4. Cloud builds and serves it on `<your-subdomain>.medusajs.site`
+
+### Vercel
+
+If you're hosting your backend elsewhere and want Vercel for the storefront:
+
+1. Push this repo to GitHub
+2. Vercel → New Project → import this repo
+3. Set the env vars in Project Settings → Environment Variables
+4. Deploy. Vercel hosts at `<your-project>.vercel.app` or your custom domain.
+
+The backend can live anywhere — Medusa Cloud, Railway, Render, AWS, your own server. Lumen only needs the HTTP URL.
+
+## Project structure
 
 ```
 src/
   app/
-    (store)/          # Storefront (header/footer layout)
-      [slug]/         # Product detail, category, brand pages
-      shop/           # Product catalog with filters
-      cart/           # Shopping cart
-      checkout/       # Checkout + success
-      account/         # Dashboard, orders, addresses, settings
-      auth/            # Login, register, forgot password
-      brands/          # All brands page
-    (admin)/admin/    # Admin dashboard
-  components/
-    ui/               # shadcn/ui + custom components
-    layout/           # Header, Footer, AnnouncementBar, BackToTop
-    products/         # ProductCard, Grid, Gallery, StarRating, etc.
-    cart/             # CartDrawer, CartItem, CartSummary
-    search/           # SearchModal
-    auth/             # AuthCardLayout
-  data/
-    products.json     # Product, category, brand data
+    (store)/                    # Storefront routes
+      [countryCode]/            # Region-scoped routes (Medusa convention)
+      cart/
+      checkout/
+      account/
+      auth/
+    sitemap.ts
+  components/                   # UI components (shadcn + custom)
   lib/
-    config.ts         # Store name, contact, social, shipping, currency
-    navigation.ts     # Desktop + mobile menu config
-    checkout/         # Pluggable checkout provider
-    repositories/     # Data access layer (JSON-backed, swappable)
-    validators/       # Zod schemas
-    analytics.ts      # Event tracking placeholder
-    structured-data.ts # JSON-LD helpers
-  store/              # Zustand stores (cart, wishlist, auth, orders)
-  types/              # TypeScript types + interfaces
-  i18n/               # next-intl config
-  hooks/              # Custom hooks (useAuthGuard)
+    medusa.ts                   # @medusajs/js-sdk client
+    repositories/               # Data access layer (swappable)
+    checkout/                   # Pluggable checkout provider
+    validators/                 # Zod schemas
+    config.ts                   # Store name, contact, social, currency
+    navigation.ts               # Menu config
+  store/                        # Zustand stores (wishlist, recently-viewed)
+  types/                        # Backend-agnostic data contract
+  i18n/                         # next-intl config
 messages/
-  en.json             # English translations (200+ keys)
-  es.json             # Spanish translations
-docs/
-  CUSTOMIZATION.md    # Full customization guide
+  en.json, es.json              # Translations
 ```
 
-## Customization
+## Adding connectors
 
-Everything is configurable from a few key files:
+Lumen ships with a clean repository layer. To plug in a third-party service (reviews, alternate payment provider, IMS sync, etc.), implement against the repository interface and swap the binding in `src/lib/repositories/index.ts`. The components don't change.
 
-| What | Where |
-|------|-------|
-| Store name, contact, social links | `src/lib/config.ts` |
-| Theme colors (rating, wishlist, status) | `src/app/globals.css` |
-| Navigation (desktop + mobile) | `src/lib/navigation.ts` |
-| Products, categories, brands | `src/data/products.json` |
-| Translations | `messages/en.json`, `messages/es.json` |
+We maintain a growing set of Medusa connectors at [Epic Design Labs](https://epicdesignlabs.com) — including payment orchestration, IMS sync, reviews, and ticketing.
 
-See [CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for the full guide.
+## Contributing
 
-## Connecting a Payment Provider
-
-The checkout uses a pluggable `CheckoutProvider` interface:
-
-```typescript
-interface CheckoutProvider {
-  createSession(cart, customer?): Promise<CheckoutSession>
-  getSession(sessionId): Promise<CheckoutSession>
-  handleWebhook(payload, signature): Promise<WebhookResult>
-}
-```
-
-Ships with a demo provider. To connect Stripe or any other payment system, implement the interface and swap the export in `src/lib/checkout/index.ts`.
-
-## Pages
-
-| Route | Description |
-|-------|-------------|
-| `/` | Home — hero, categories, featured products, developer CTA |
-| `/shop` | Product catalog with filters and sorting |
-| `/[slug]` | Product detail, category, or brand (auto-resolved) |
-| `/cart` | Shopping cart |
-| `/checkout` | Checkout form |
-| `/search` | Search (also available via Cmd+K modal) |
-| `/wishlist` | Saved products |
-| `/brands` | All brands |
-| `/account` | Account dashboard |
-| `/auth/login` | Sign in |
-| `/about` | About the starter + Epic Design Labs |
-| `/contact` | Contact form |
-| `/faq` | FAQ accordion |
-| `/policies/*` | Shipping, returns, privacy, terms |
-
-## Need Help?
-
-This starter is free and open source. If you need help customizing it or building a complete ecommerce solution:
-
-- **Email**: support@epicdesignlabs.com
-- **Website**: [epicdesignlabs.com](https://epicdesignlabs.com)
-- **Issues**: [GitHub Issues](https://github.com/Epic-Design-Labs/nextjs-ecommerce-starter/issues)
+Issues and PRs welcome at [github.com/Epic-Design-Labs/medusa-nextjs-lumen](https://github.com/Epic-Design-Labs/medusa-nextjs-lumen/issues).
 
 ## License
 
 MIT — free for personal and commercial use.
+
+## Acknowledgments
+
+Lumen builds on [Epic Design Labs' Next.js Ecommerce Starter](https://github.com/Epic-Design-Labs/nextjs-ecommerce-starter), specialized for Medusa.
