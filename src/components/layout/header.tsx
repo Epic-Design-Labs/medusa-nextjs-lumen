@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SearchModal } from "@/components/search/search-modal"
 import { cn } from "@/lib/utils"
-import { shopLinks, mobileMenuSections } from "@/lib/navigation"
+import { mobileMenuSections, type NavItem } from "@/lib/navigation"
 import { siteConfig } from "@/lib/config"
 import { useTranslations } from "next-intl"
 import { useState, useEffect, useCallback } from "react"
@@ -29,6 +29,16 @@ interface HeaderProps {
 
 export function Header({ categories = [] }: HeaderProps) {
   const allCategories = categories
+
+  // Build the mobile menu's Shop section from real Medusa categories
+  // (top-level only — children render as expandable subcategories below).
+  const shopMenuItems: NavItem[] = allCategories
+    .filter((c) => !c.parentId)
+    .map((c) => ({ name: c.name, href: `/${c.slug}` }))
+
+  const mobileSections = mobileMenuSections.map((section) =>
+    section.label === "Shop" ? { ...section, items: shopMenuItems } : section
+  )
   const t = useTranslations("nav")
   const tCommon = useTranslations("common")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -88,7 +98,7 @@ export function Header({ categories = [] }: HeaderProps) {
             </div>
 
             <nav className="flex flex-1 flex-col overflow-y-auto px-6 pb-8">
-              {mobileMenuSections.map((section, sectionIdx) => (
+              {mobileSections.map((section, sectionIdx) => (
                 <div key={section.label}>
                   {sectionIdx > 0 && <div className="my-4 border-t" />}
                   <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -108,7 +118,7 @@ export function Header({ categories = [] }: HeaderProps) {
                       <div key={item.name}>
                         <div className="flex items-center">
                           <Link
-                            href={item.href}
+                            href={link(item.href)}
                             className="flex-1 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
                             onClick={() => setMobileMenuOpen(false)}
                           >
@@ -154,17 +164,20 @@ export function Header({ categories = [] }: HeaderProps) {
           {siteConfig.name}
         </Link>
 
-        {/* Desktop nav */}
+        {/* Desktop nav — top-level Medusa categories (no parentId) */}
         <nav className="hidden lg:flex lg:gap-6">
-          {shopLinks.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
-            >
-              {item.name}
-            </Link>
-          ))}
+          {allCategories
+            .filter((c) => !c.parentId)
+            .slice(0, 6)
+            .map((cat) => (
+              <Link
+                key={cat.id}
+                href={link(`/${cat.slug}`)}
+                className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
+              >
+                {cat.name}
+              </Link>
+            ))}
         </nav>
 
         {/* Actions */}
