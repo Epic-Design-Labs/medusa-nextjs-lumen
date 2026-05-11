@@ -155,6 +155,62 @@ async function resolveCategoryIdBySlug(slug: string): Promise<string | null> {
   return product_categories[0]?.id ?? null
 }
 
+async function resolveCollectionIdBySlug(handle: string): Promise<string | null> {
+  const { collections } = await sdk.store.collection.list({
+    handle,
+    limit: 1,
+  })
+  return collections[0]?.id ?? null
+}
+
+/**
+ * List products in a Medusa collection (different from a category — Medusa
+ * has both as first-class concepts). Used by the slug router below.
+ */
+export async function listProductsByCollection(
+  collectionSlug: string,
+  pagination?: PaginationParams
+): Promise<PaginatedResult<Product>> {
+  const region = await resolveRegion()
+  const collectionId = await resolveCollectionIdBySlug(collectionSlug)
+  const page = pagination?.page ?? 1
+  const limit = pagination?.limit ?? 40
+  if (!collectionId) {
+    return {
+      items: [],
+      pagination: {
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    }
+  }
+  const { products, count } = await sdk.store.product.list({
+    region_id: region.id,
+    collection_id: [collectionId],
+    fields:
+      "*variants,*variants.calculated_price,*categories,*tags,*type,+thumbnail,+metadata",
+    limit,
+    offset: (page - 1) * limit,
+  })
+  const items = products.map((p) => transformProduct(p, region.currency))
+  const totalPages = Math.max(1, Math.ceil(count / limit))
+  return {
+    items,
+    pagination: {
+      total: count,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    },
+  }
+}
+
 export const medusaProductRepository: ProductRepository = {
   async list(filters, sort, pagination) {
     const region = await resolveRegion()

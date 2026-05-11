@@ -8,5 +8,7 @@
 export { medusaProductRepository as productRepository } from "./medusa-product-repository"
 export { medusaCategoryRepository as categoryRepository } from "./medusa-category-repository"
 export { medusaBrandRepository as brandRepository } from "./medusa-brand-repository"
+export { medusaCollectionRepository as collectionRepository } from "./medusa-collection-repository"
 export { jsonPageRepository as pageRepository } from "./json-page-repository"
 export { jsonBlogRepository as blogRepository } from "./json-blog-repository"
+export type { Collection } from "./medusa-collection-repository"

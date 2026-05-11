@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
-import { productRepository, categoryRepository, brandRepository } from "@/lib/repositories"
+import { productRepository, categoryRepository, brandRepository, collectionRepository } from "@/lib/repositories"
+import { listProductsByCollection } from "@/lib/repositories/medusa-product-repository"
 import { ProductDetailView } from "./product-detail-view"
 import { CategoryView } from "./category-view"
 import { BrandView } from "./brand-view"
@@ -134,6 +135,30 @@ export default async function SlugPage({ params }: SlugPageProps) {
         pagination={pagination}
         subcategories={subcategories}
         ancestors={ancestors}
+      />
+    )
+  }
+
+  // Check collection (Medusa-native concept distinct from categories)
+  const collection = await collectionRepository.getByHandle(slug)
+  if (collection) {
+    const { items: products, pagination } = await listProductsByCollection(slug, {
+      page: 1,
+      limit: 40,
+    })
+    return (
+      <CategoryView
+        category={{
+          id: collection.id,
+          name: collection.title,
+          slug: collection.handle,
+          description: "",
+          order: 0,
+        }}
+        products={products}
+        pagination={pagination}
+        subcategories={[]}
+        ancestors={[]}
       />
     )
   }

@@ -15,6 +15,7 @@ import {
   listMyAddresses,
   addMyAddress,
   deleteMyAddress,
+  updateMyAddress,
 } from "@/lib/customer-client"
 import { toast } from "sonner"
 
@@ -89,6 +90,21 @@ export default function AddressesPage() {
       toast("Address removed")
     } catch {
       toast.error("Couldn't remove address")
+    }
+  }
+
+  async function handleSetDefault(id: string, kind: "shipping" | "billing") {
+    try {
+      const next = await updateMyAddress(
+        id,
+        kind === "shipping"
+          ? { is_default_shipping: true }
+          : { is_default_billing: true }
+      )
+      setAddresses(next)
+      toast.success(`Set as default ${kind}`)
+    } catch {
+      toast.error("Couldn't update address")
     }
   }
 
@@ -188,14 +204,26 @@ export default function AddressesPage() {
                     {addr.country_code?.toUpperCase()}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemove(addr.id)}
-                  aria-label="Remove address"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-start gap-1">
+                  {!addr.is_default_shipping && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSetDefault(addr.id, "shipping")}
+                      className="text-xs"
+                    >
+                      Default shipping
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemove(addr.id)}
+                    aria-label="Remove address"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
