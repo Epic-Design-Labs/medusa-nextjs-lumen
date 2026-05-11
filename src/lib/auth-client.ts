@@ -121,3 +121,26 @@ export async function requestPasswordReset(email: string): Promise<void> {
     void err
   }
 }
+
+/**
+ * Complete the password reset by submitting the new password along with the
+ * reset token from the email link. Throws AuthError on invalid/expired tokens.
+ */
+export async function completePasswordReset(args: {
+  email: string
+  password: string
+  token: string
+}): Promise<void> {
+  try {
+    await sdk.auth.updateProvider(
+      "customer",
+      "emailpass",
+      { email: args.email, password: args.password },
+      args.token
+    )
+  } catch (err) {
+    const message =
+      (err as { message?: string })?.message ?? "Couldn't reset password"
+    throw new AuthError(message)
+  }
+}
