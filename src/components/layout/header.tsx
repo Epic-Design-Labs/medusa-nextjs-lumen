@@ -161,7 +161,7 @@ export function Header({ categories = [] }: HeaderProps) {
 
         {/* Logo */}
         <Link href={link("/")} className="text-xl font-semibold tracking-tight">
-          {siteConfig.name}
+          Lumen Starter
         </Link>
 
         {/* Desktop nav — top-level Medusa categories (no parentId) */}
