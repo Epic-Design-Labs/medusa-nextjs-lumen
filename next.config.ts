@@ -6,10 +6,22 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   images: {
-    // Add remote image domains here when using real product images
-    // remotePatterns: [
-    //   { protocol: "https", hostname: "cdn.example.com" },
-    // ],
+    // Remote image domains allowed by next/image. Add the hostname your
+    // Medusa backend uses if it isn't covered here.
+    remotePatterns: [
+      // Medusa demo / seed images
+      { protocol: "https", hostname: "medusa-public-images.s3.eu-west-1.amazonaws.com" },
+      // Generic AWS S3
+      { protocol: "https", hostname: "*.amazonaws.com" },
+      // Medusa Cloud-hosted storage
+      { protocol: "https", hostname: "*.medusajs.app" },
+      { protocol: "https", hostname: "*.medusajs.site" },
+      // Cloudflare R2
+      { protocol: "https", hostname: "*.r2.dev" },
+      { protocol: "https", hostname: "*.r2.cloudflarestorage.com" },
+      // DigitalOcean Spaces
+      { protocol: "https", hostname: "*.digitaloceanspaces.com" },
+    ],
   },
 
   // Redirects are defined in src/lib/redirects.ts — edit there.

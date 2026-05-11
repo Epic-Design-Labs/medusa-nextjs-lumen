@@ -7,14 +7,31 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { ProductCard } from "@/components/products/product-card"
 import { useWishlistStore } from "@/store/wishlist"
 import type { Product } from "@/types"
-import data from "@/data/products.json"
-
-const allProducts = data.products as Product[]
+import { fetchProductsByIdClient } from "@/lib/medusa-client-search"
 
 export default function WishlistPage() {
   const wishlistItems = useWishlistStore((s) => s.items)
   const [mounted, setMounted] = useState(false)
+  const [wishlistedProducts, setWishlistedProducts] = useState<Product[]>([])
+
   useEffect(() => setMounted(true), [])
+
+  useEffect(() => {
+    if (!mounted) return
+    if (wishlistItems.length === 0) {
+      setWishlistedProducts([])
+      return
+    }
+    let cancelled = false
+    fetchProductsByIdClient(wishlistItems.map((w) => w.productId)).then(
+      (products) => {
+        if (!cancelled) setWishlistedProducts(products)
+      }
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [mounted, wishlistItems])
 
   if (!mounted) {
     return (
@@ -23,10 +40,6 @@ export default function WishlistPage() {
       </div>
     )
   }
-
-  const wishlistedProducts = allProducts.filter((p) =>
-    wishlistItems.some((w) => w.productId === p.id)
-  )
 
   if (wishlistedProducts.length === 0) {
     return (

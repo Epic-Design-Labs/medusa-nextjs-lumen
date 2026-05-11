@@ -8,17 +8,13 @@ import { StarRating } from "@/components/products/star-rating"
 import { formatPrice } from "@/lib/utils"
 import { PLACEHOLDER_IMAGE } from "@/lib/constants"
 import type { Product } from "@/types"
-import data from "@/data/products.json"
-
-const allProducts = data.products as Product[]
+import { searchProductsClient } from "@/lib/medusa-client-search"
 
 const popularSearches = [
-  "Headphones",
-  "Coffee",
-  "Leather",
-  "Wireless",
-  "Organic",
-  "Candle",
+  "T-Shirt",
+  "Sweatshirt",
+  "Pants",
+  "Merch",
 ]
 
 interface SearchModalProps {
@@ -28,18 +24,27 @@ interface SearchModalProps {
 
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [query, setQuery] = useState("")
+  const [results, setResults] = useState<Product[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
 
-  const results = query.trim().length > 0
-    ? allProducts.filter(
-        (p) =>
-          p.status === "active" &&
-          (p.name.toLowerCase().includes(query.toLowerCase()) ||
-            p.description.toLowerCase().includes(query.toLowerCase()) ||
-            p.tags.some((t) => t.toLowerCase().includes(query.toLowerCase())))
-      ).slice(0, 6)
-    : []
+  // Debounced server-side search via Medusa.
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (trimmed.length === 0) {
+      setResults([])
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      const items = await searchProductsClient(trimmed, 6)
+      if (!cancelled) setResults(items)
+    }, 200)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [query])
 
   const handleClose = useCallback(() => {
     setQuery("")
