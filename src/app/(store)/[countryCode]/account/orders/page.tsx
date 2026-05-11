@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import type { HttpTypes } from "@medusajs/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Package } from "lucide-react"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useAuthGuard } from "@/hooks/use-auth-guard"
+import { useCountryLink } from "@/hooks/use-country-link"
 import { listMyOrders } from "@/lib/customer-client"
 import { formatPrice, formatDate } from "@/lib/utils"
 
@@ -14,6 +16,7 @@ type StoreOrder = HttpTypes.StoreOrder
 
 export default function OrdersPage() {
   const { isReady } = useAuthGuard()
+  const link = useCountryLink()
   const [orders, setOrders] = useState<StoreOrder[]>([])
   const [loaded, setLoaded] = useState(false)
 
@@ -59,7 +62,8 @@ export default function OrdersPage() {
           {orders.map((order) => {
             const currency = (order.currency_code ?? "usd").toLowerCase()
             return (
-              <Card key={order.id}>
+              <Link key={order.id} href={link(`/account/orders/${order.id}`)} className="block">
+              <Card className="transition-shadow hover:shadow-md">
                 <CardContent className="pt-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -92,6 +96,7 @@ export default function OrdersPage() {
                   </div>
                 </CardContent>
               </Card>
+              </Link>
             )
           })}
         </div>

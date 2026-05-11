@@ -39,6 +39,40 @@ export async function retrieveMyOrder(id: string): Promise<StoreOrder | null> {
 }
 
 // ---------------------------------------------------------------------------
+// Returns
+// ---------------------------------------------------------------------------
+
+export interface ReturnItemInput {
+  line_item_id: string
+  quantity: number
+  reason_id?: string
+  note?: string
+}
+
+/**
+ * Initiate a customer return request for an order. The merchant approves the
+ * return in Medusa Admin; this just creates the request.
+ *
+ * The Medusa JS SDK (v2.14.x) doesn't wrap the store/return endpoint yet —
+ * we call it directly via the client. Update once `sdk.store.return.initiate`
+ * lands in the SDK.
+ */
+export async function requestReturn(args: {
+  order_id: string
+  items: ReturnItemInput[]
+  note?: string
+}): Promise<void> {
+  await sdk.client.fetch("/store/return", {
+    method: "POST",
+    body: {
+      order_id: args.order_id,
+      items: args.items,
+      note: args.note,
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Profile
 // ---------------------------------------------------------------------------
 
