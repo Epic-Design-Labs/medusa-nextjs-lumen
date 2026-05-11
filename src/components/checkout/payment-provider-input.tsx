@@ -3,6 +3,11 @@
 import { useState, type FormEvent } from "react"
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js"
 import { loadStripe, type Stripe } from "@stripe/stripe-js"
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js"
+import type {
+  OnApproveData,
+  OnApproveActions,
+} from "@paypal/paypal-js"
 import { Button } from "@/components/ui/button"
 import type { ActivePaymentSession } from "@/lib/cart-client"
 
@@ -28,6 +33,9 @@ export function PaymentProviderInput(props: ProviderInputProps) {
   if (isStripeProviderId(props.providerId)) {
     return <StripePayment {...props} />
   }
+  if (isPayPalProviderId(props.providerId)) {
+    return <PayPalPayment {...props} />
+  }
   if (props.providerId === "pp_system_default") {
     return <SystemDefaultPayment {...props} />
   }
@@ -36,6 +44,10 @@ export function PaymentProviderInput(props: ProviderInputProps) {
 
 function isStripeProviderId(id: string): boolean {
   return id.startsWith("pp_stripe") || id === "pp_stripe_stripe"
+}
+
+function isPayPalProviderId(id: string): boolean {
+  return id.startsWith("pp_paypal")
 }
 
 // ---------------------------------------------------------------------------
@@ -188,5 +200,69 @@ function StripeForm({ onSubmit, submitting, totalLabel }: StripeFormProps) {
         {isSubmitting ? "Processing…" : `Pay ${totalLabel}`}
       </Button>
     </form>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// PayPal — Smart Buttons + onApprove
+// ---------------------------------------------------------------------------
+
+function PayPalPayment({ session, onSubmit, submitting }: ProviderInputProps) {
+  const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
+  const orderId =
+    typeof session?.data.id === "string" ? (session.data.id as string) : undefined
+
+  if (!clientId) {
+    return (
+      <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-900">
+        PayPal is configured on the Medusa backend but{" "}
+        <code>NEXT_PUBLIC_PAYPAL_CLIENT_ID</code> is not set on the storefront.
+        Add it to <code>.env.local</code> and reload.
+      </div>
+    )
+  }
+
+  if (!orderId) {
+    return (
+      <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-900">
+        Couldn&apos;t get a PayPal order id from the payment session. Check that
+        PayPal is configured on the Medusa backend.
+      </div>
+    )
+  }
+
+  async function onApprove(_data: OnApproveData, actions: OnApproveActions) {
+    // Capture on PayPal's side, then complete the cart on Medusa.
+    if (actions.order) {
+      try {
+        await actions.order.capture()
+      } catch (err) {
+        console.error("PayPal capture failed", err)
+        return
+      }
+    }
+    await onSubmit()
+  }
+
+  return (
+    <div className="space-y-3">
+      <PayPalScriptProvider
+        options={{
+          clientId,
+          currency: (typeof session?.data.currency_code === "string"
+            ? (session.data.currency_code as string)
+            : "USD"
+          ).toUpperCase(),
+          intent: "capture",
+        }}
+      >
+        <PayPalButtons
+          disabled={submitting}
+          createOrder={() => Promise.resolve(orderId)}
+          onApprove={onApprove}
+          style={{ layout: "vertical" }}
+        />
+      </PayPalScriptProvider>
+    </div>
   )
 }
