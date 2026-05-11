@@ -5,10 +5,10 @@
 
 export const siteConfig = {
   // Branding
-  name: "Next.js Ecommerce Starter",
-  tagline: "A free, open-source Next.js ecommerce template.",
+  name: "Lumen Starter for Medusa JS",
+  tagline: "A modern Next.js storefront starter for Medusa.",
   description:
-    "A free, production-ready Next.js ecommerce starter template built with Tailwind CSS and shadcn/ui. Responsive, accessible, SEO optimized, and ready to connect to any checkout system. Built by Epic Design Labs.",
+    "Lumen is an open-source Next.js storefront starter for Medusa, designed by Epic Design Labs. Deploy to Medusa Cloud or Vercel — native Medusa features wired end-to-end (catalog, multi-region pricing, cart, promotions, checkout, accounts, returns) with a pluggable payment layer that already speaks Stripe and PayPal.",
 
   // Announcement bar (set to "" to hide)
   announcement: "Free shipping on all orders over $75 — Shop now!",
