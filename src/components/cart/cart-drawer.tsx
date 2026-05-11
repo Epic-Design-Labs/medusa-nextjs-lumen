@@ -12,6 +12,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet"
 import { CartItem } from "./cart-item"
+import { PromotionCodeForm } from "./promotion-code-form"
 import { useCartStore } from "@/store/cart"
 import { formatPrice } from "@/lib/utils"
 import { useCountryLink } from "@/hooks/use-country-link"
@@ -79,6 +80,7 @@ export function CartDrawer() {
 
             <SheetFooter className="!mt-0 shrink-0 border-t !px-4 !pt-4 !pb-8">
               <div className="w-full space-y-3">
+                <PromotionCodeForm />
                 <div className="flex justify-between text-sm font-medium">
                   <span>Subtotal</span>
                   <span>{formatPrice(subtotal, cart?.currency)}</span>

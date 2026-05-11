@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { useCartStore } from "@/store/cart"
 import { CartItem } from "@/components/cart/cart-item"
 import { CartSummary } from "@/components/cart/cart-summary"
+import { PromotionCodeForm } from "@/components/cart/promotion-code-form"
 import { useEffect } from "react"
 
 export default function CartPage() {
@@ -55,6 +56,9 @@ export default function CartPage() {
           ))}
         </div>
         <Separator className="my-6" />
+        <div className="mb-6">
+          <PromotionCodeForm />
+        </div>
         {cart && <CartSummary cart={cart} />}
         <div className="mt-8 flex flex-col gap-3">
           <Button size="lg" asChild>

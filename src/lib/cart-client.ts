@@ -168,6 +168,38 @@ export function clearLocalCart() {
 export const CART_COOKIE_NAME = CART_COOKIE
 
 // =============================================================================
+// Promotion codes
+// =============================================================================
+
+/**
+ * Apply one or more promotion codes to the current cart. Medusa returns the
+ * updated cart with discounts reflected in subtotal/total. If a code is
+ * invalid, Medusa silently drops it — caller should inspect the returned
+ * cart's promotions to verify.
+ */
+export async function applyPromotionCodes(codes: string[]): Promise<Cart> {
+  const id = requireCartId()
+  const { cart } = await sdk.store.cart.update(id, {
+    promo_codes: codes,
+  } as Partial<HttpTypes.StoreUpdateCart>)
+  const fresh = await fetchExistingCart(cart.id)
+  return transform(fresh ?? cart)
+}
+
+/**
+ * Read the codes currently applied to the cart. Used to render badges and
+ * power the "remove code" button.
+ */
+export async function getAppliedPromotionCodes(): Promise<string[]> {
+  const id = readCookie(CART_COOKIE)
+  if (!id) return []
+  const cart = await fetchExistingCart(id)
+  const promotions =
+    (cart as { promotions?: Array<{ code?: string }> } | null)?.promotions ?? []
+  return promotions.map((p) => p.code ?? "").filter(Boolean)
+}
+
+// =============================================================================
 // Checkout (Phase 4)
 // =============================================================================
 
