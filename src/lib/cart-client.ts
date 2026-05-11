@@ -258,26 +258,57 @@ export async function listPaymentProviders(): Promise<PaymentProviderInfo[]> {
   }))
 }
 
+export interface ActivePaymentSession {
+  id: string
+  provider_id: string
+  amount?: number
+  /**
+   * Provider-specific payload (e.g. Stripe `client_secret`, PayPal order ID).
+   * Read what your chosen provider needs from here.
+   */
+  data: Record<string, unknown>
+}
+
 /**
  * Create a payment collection for the cart (if needed) and initiate a payment
- * session with the chosen provider. Returns the updated cart with the session.
+ * session with the chosen provider. Returns the updated cart plus the active
+ * session (so the storefront can render provider-specific UI like Stripe
+ * Elements using `session.data.client_secret`).
  */
 export async function initiatePaymentSession(
   providerId: string
-): Promise<Cart> {
+): Promise<{ cart: Cart; session: ActivePaymentSession | null }> {
   const id = requireCartId()
   const cart = await fetchExistingCart(id)
   if (!cart) throw new Error("Cart not found")
 
-  // Use the SDK's helper which creates the payment collection + session.
-  const { payment_collection } = await sdk.store.payment.initiatePaymentSession(
+  await sdk.store.payment.initiatePaymentSession(
     cart as HttpTypes.StoreCart,
     { provider_id: providerId }
   )
-  // payment_collection is attached; refetch cart for the up-to-date view.
-  void payment_collection
+
   const fresh = await fetchExistingCart(id)
-  return transform(fresh ?? cart)
+  const session = findActiveSession(fresh, providerId)
+  return { cart: transform(fresh ?? cart), session }
+}
+
+function findActiveSession(
+  cart: StoreCart | null,
+  providerId: string
+): ActivePaymentSession | null {
+  const pc = (cart as { payment_collection?: HttpTypes.StorePaymentCollection })
+    ?.payment_collection
+  const sessions =
+    (pc as { payment_sessions?: HttpTypes.StorePaymentSession[] } | undefined)
+      ?.payment_sessions ?? []
+  const match = sessions.find((s) => s.provider_id === providerId) ?? sessions[0]
+  if (!match) return null
+  return {
+    id: match.id,
+    provider_id: match.provider_id ?? providerId,
+    amount: match.amount as number | undefined,
+    data: (match.data ?? {}) as Record<string, unknown>,
+  }
 }
 
 /**

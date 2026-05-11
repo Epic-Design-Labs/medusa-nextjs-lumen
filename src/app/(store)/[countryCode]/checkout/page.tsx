@@ -19,10 +19,12 @@ import {
   listPaymentProviders,
   listShippingOptions,
   updateCartContact,
+  type ActivePaymentSession,
   type CheckoutAddress,
   type PaymentProviderInfo,
   type ShippingOption,
 } from "@/lib/cart-client"
+import { PaymentProviderInput } from "@/components/checkout/payment-provider-input"
 
 type Step = "address" | "shipping" | "payment"
 
@@ -66,6 +68,8 @@ export default function CheckoutPage() {
 
   const [paymentProviders, setPaymentProviders] = useState<PaymentProviderInfo[]>([])
   const [selectedProvider, setSelectedProvider] = useState<string>("")
+  const [activeSession, setActiveSession] = useState<ActivePaymentSession | null>(null)
+  const [initiatingProvider, setInitiatingProvider] = useState<string | null>(null)
 
   if (!hasHydrated) {
     return (
@@ -146,14 +150,48 @@ export default function CheckoutPage() {
     }
   }
 
-  async function handlePaymentSubmit() {
+  async function ensurePaymentSession(providerId: string): Promise<ActivePaymentSession | null> {
+    if (activeSession && activeSession.provider_id === providerId) {
+      return activeSession
+    }
+    setInitiatingProvider(providerId)
+    try {
+      const { session } = await initiatePaymentSession(providerId)
+      setActiveSession(session)
+      return session
+    } catch (err) {
+      console.error(err)
+      toast.error("Couldn't initiate payment. Try a different provider?")
+      return null
+    } finally {
+      setInitiatingProvider(null)
+    }
+  }
+
+  // Initiate session as soon as a provider is picked, so provider-specific UI
+  // (Stripe Elements, etc.) can render with the necessary client_secret.
+  async function handleProviderPick(providerId: string) {
+    setSelectedProvider(providerId)
+    await ensurePaymentSession(providerId)
+  }
+
+  /**
+   * Final step: payment is already authorized on the provider's side (or the
+   * provider didn't need client-side capture), so just complete the cart.
+   * The PaymentProviderInput handles any client-side confirm step (Stripe
+   * Elements, PayPal, etc.) before calling this.
+   */
+  async function handlePlaceOrder() {
     if (!selectedProvider) {
       toast.error("Please select a payment method")
       return
     }
     setSubmitting(true)
     try {
-      await initiatePaymentSession(selectedProvider)
+      // Make sure a session exists (e.g. if user picked then jumped back).
+      const session = await ensurePaymentSession(selectedProvider)
+      if (!session) return
+
       const result = await completeCart()
       if (result.type === "order") {
         useCartStore.setState({ cart: null, hasHydrated: false })
@@ -270,14 +308,15 @@ export default function CheckoutPage() {
 
           {step === "payment" && (
             <Card>
-              <CardContent className="space-y-4 p-6">
-                <h2 className="text-lg font-semibold">Payment</h2>
-                <p className="text-xs text-muted-foreground">
-                  Payment providers configured on your Medusa backend. The
-                  default <code className="rounded bg-muted px-1">system_default</code> provider
-                  authorizes manually — useful for demos and as a fallback
-                  while Stripe / Throttle / other providers are set up.
-                </p>
+              <CardContent className="space-y-6 p-6">
+                <div>
+                  <h2 className="text-lg font-semibold">Payment method</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Providers configured on your Medusa backend. Add Stripe,
+                    PayPal, or others in Medusa Admin → Settings → Regions.
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   {paymentProviders.map((p) => (
                     <label
@@ -290,7 +329,7 @@ export default function CheckoutPage() {
                           name="provider"
                           value={p.id}
                           checked={selectedProvider === p.id}
-                          onChange={() => setSelectedProvider(p.id)}
+                          onChange={() => handleProviderPick(p.id)}
                         />
                         <span className="text-sm font-medium">{providerLabel(p.id)}</span>
                       </div>
@@ -304,16 +343,28 @@ export default function CheckoutPage() {
                     </p>
                   )}
                 </div>
-                <div className="flex justify-between gap-3 pt-4">
+
+                {selectedProvider && (
+                  <div className="border-t pt-6">
+                    {initiatingProvider === selectedProvider ? (
+                      <p className="text-sm text-muted-foreground">
+                        Preparing {providerLabel(selectedProvider)}…
+                      </p>
+                    ) : (
+                      <PaymentProviderInput
+                        providerId={selectedProvider}
+                        session={activeSession}
+                        totalLabel={formatPrice(cart?.total ?? 0, cart?.currency)}
+                        onSubmit={handlePlaceOrder}
+                        submitting={submitting}
+                      />
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-between gap-3 pt-2">
                   <Button type="button" variant="outline" onClick={() => setStep("shipping")}>
                     Back
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handlePaymentSubmit}
-                    disabled={submitting || paymentProviders.length === 0}
-                  >
-                    {submitting ? "Placing order…" : `Place order — ${formatPrice(cart?.total ?? 0, cart?.currency)}`}
                   </Button>
                 </div>
               </CardContent>
