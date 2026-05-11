@@ -57,7 +57,7 @@ export default async function HomePage({ params }: HomePageProps) {
             Open source · MIT · Medusa Cloud or Vercel
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Lumen Starter for Medusa JS
+            Lumen Starter
           </h1>
           <p className="mt-4 text-lg font-medium text-foreground/80 sm:text-xl">
             A modern Next.js storefront starter for Medusa.
