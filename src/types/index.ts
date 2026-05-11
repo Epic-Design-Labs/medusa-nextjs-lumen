@@ -114,6 +114,8 @@ export interface Category {
 
 export interface CartItem {
   id: string
+  /** Medusa line-item ID, used to mutate this row. May equal `id` for compatibility. */
+  lineItemId?: string
   variantId: string
   productId: string
   name: string
@@ -123,6 +125,8 @@ export interface CartItem {
   price: number
   quantity: number
   lineTotal: number
+  /** Currency code from the cart's region, e.g. "usd". */
+  currency?: string
 }
 
 export interface Cart {
@@ -133,6 +137,8 @@ export interface Cart {
   shipping: number
   total: number
   itemCount: number
+  /** Currency code from the cart's region, e.g. "usd". */
+  currency?: string
 }
 
 // --- Order ---

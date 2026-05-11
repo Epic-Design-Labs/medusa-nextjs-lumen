@@ -83,18 +83,14 @@ export function ProductDetailView({
     selectedVariant.inventory.quantity > 0 ||
     selectedVariant.inventory.allowBackorder
 
-  function handleAddToCart() {
-    addToCart({
-      variantId: selectedVariant!.id,
-      productId: product.id,
-      name: product.name,
-      variantName: selectedVariant!.name,
-      image: product.images[0] ?? { url: "", alt: product.name },
-      slug: product.slug,
-      price: selectedVariant!.price,
-      quantity,
-    })
-    openCart()
+  async function handleAddToCart() {
+    try {
+      await addToCart(selectedVariant!.id, quantity)
+      openCart()
+    } catch (err) {
+      console.error("Add to cart failed", err)
+      toast.error("Couldn't add to cart. Please try again.")
+    }
   }
 
   function handleToggleWishlist() {

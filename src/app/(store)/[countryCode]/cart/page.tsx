@@ -9,21 +9,26 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { useCartStore } from "@/store/cart"
 import { CartItem } from "@/components/cart/cart-item"
 import { CartSummary } from "@/components/cart/cart-summary"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 
 export default function CartPage() {
-  const items = useCartStore((s) => s.items)
-  const getSubtotal = useCartStore((s) => s.getSubtotal)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const cart = useCartStore((s) => s.cart)
+  const hasHydrated = useCartStore((s) => s.hasHydrated)
+  const hydrate = useCartStore((s) => s.hydrate)
 
-  if (!mounted) {
+  useEffect(() => {
+    if (!hasHydrated) void hydrate()
+  }, [hasHydrated, hydrate])
+
+  if (!hasHydrated) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
         <PageHeader title="Shopping Cart" />
       </div>
     )
   }
+
+  const items = cart?.items ?? []
 
   if (items.length === 0) {
     return (
@@ -40,19 +45,17 @@ export default function CartPage() {
     )
   }
 
-  const subtotal = getSubtotal()
-
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 pb-16 sm:px-6 sm:py-16 lg:px-8">
       <PageHeader title="Shopping Cart" />
       <div className="mt-8">
         <div className="divide-y">
           {items.map((item) => (
-            <CartItem key={item.variantId} item={item} />
+            <CartItem key={item.id} item={item} />
           ))}
         </div>
         <Separator className="my-6" />
-        <CartSummary subtotal={subtotal} />
+        {cart && <CartSummary cart={cart} />}
         <div className="mt-8 flex flex-col gap-3">
           <Button size="lg" asChild>
             <Link href="/checkout">Proceed to Checkout</Link>

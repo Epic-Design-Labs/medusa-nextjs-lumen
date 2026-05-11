@@ -60,7 +60,7 @@ export function CartItem({ item }: CartItemProps) {
             variant="ghost"
             size="icon"
             className="h-6 w-6"
-            onClick={() => removeItem(item.variantId)}
+            onClick={() => removeItem(item.lineItemId ?? item.id)}
             aria-label={`Remove ${item.name}`}
           >
             <X className="h-3 w-3" />
@@ -70,7 +70,9 @@ export function CartItem({ item }: CartItemProps) {
         <div className="flex items-center justify-between gap-2">
           <QuantitySelector
             quantity={item.quantity}
-            onQuantityChange={(q) => updateQuantity(item.variantId, q)}
+            onQuantityChange={(q) =>
+              updateQuantity(item.lineItemId ?? item.id, q)
+            }
           />
           <span className="shrink-0 text-sm font-medium tabular-nums">
             {formatPrice(item.lineTotal)}

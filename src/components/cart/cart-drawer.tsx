@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import Link from "next/link"
 import { ShoppingBag, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,19 +11,24 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
 import { CartItem } from "./cart-item"
-import { CartSummary } from "./cart-summary"
 import { useCartStore } from "@/store/cart"
 import { formatPrice } from "@/lib/utils"
 
 export function CartDrawer() {
-  const items = useCartStore((s) => s.items)
+  const cart = useCartStore((s) => s.cart)
   const isOpen = useCartStore((s) => s.isOpen)
   const closeCart = useCartStore((s) => s.closeCart)
-  const getSubtotal = useCartStore((s) => s.getSubtotal)
+  const hydrate = useCartStore((s) => s.hydrate)
+  const hasHydrated = useCartStore((s) => s.hasHydrated)
 
-  const subtotal = getSubtotal()
+  // Hydrate the cart once on mount so a returning visitor sees their items.
+  useEffect(() => {
+    if (!hasHydrated) void hydrate()
+  }, [hasHydrated, hydrate])
+
+  const items = cart?.items ?? []
+  const subtotal = cart?.subtotal ?? 0
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
@@ -64,7 +70,7 @@ export function CartDrawer() {
             <div className="flex-1 overflow-y-auto px-4">
               <div className="divide-y">
                 {items.map((item) => (
-                  <CartItem key={item.variantId} item={item} />
+                  <CartItem key={item.id} item={item} />
                 ))}
               </div>
             </div>
@@ -73,7 +79,7 @@ export function CartDrawer() {
               <div className="w-full space-y-3">
                 <div className="flex justify-between text-sm font-medium">
                   <span>Subtotal</span>
-                  <span>{formatPrice(subtotal)}</span>
+                  <span>{formatPrice(subtotal, cart?.currency)}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Shipping and taxes calculated at checkout.
