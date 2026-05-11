@@ -9,30 +9,11 @@ import type {
   ProductVariant,
   SortOption,
 } from "@/types"
-import { sdk, DEFAULT_REGION } from "@/lib/medusa"
+import { sdk } from "@/lib/medusa"
+import { resolveRegion } from "@/lib/medusa-region"
 
 type StoreProduct = HttpTypes.StoreProduct
 type StoreProductVariant = HttpTypes.StoreProductVariant
-
-let regionCache: Promise<{ id: string; currency: string }> | null = null
-
-async function resolveRegion(): Promise<{ id: string; currency: string }> {
-  if (!regionCache) {
-    regionCache = sdk.store.region.list({}).then(({ regions }) => {
-      const match = regions.find((r) =>
-        r.countries?.some((c) => c.iso_2 === DEFAULT_REGION)
-      )
-      const fallback = match ?? regions[0]
-      if (!fallback) {
-        throw new Error(
-          `No Medusa regions found. Configure at least one region in your backend.`
-        )
-      }
-      return { id: fallback.id, currency: fallback.currency_code ?? "usd" }
-    })
-  }
-  return regionCache
-}
 
 function transformImage(
   image: { url?: string | null; id?: string } | undefined,
