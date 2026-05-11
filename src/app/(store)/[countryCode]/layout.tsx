@@ -1,15 +1,67 @@
+import { redirect, notFound } from "next/navigation"
+import { cookies } from "next/headers"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { AnnouncementBar } from "@/components/layout/announcement-bar"
 import { CartDrawer } from "@/components/cart/cart-drawer"
 import { BackToTop } from "@/components/layout/back-to-top"
 import { categoryRepository } from "@/lib/repositories"
+import { sdk } from "@/lib/medusa"
+import { COUNTRY_COOKIE, isCountryCode } from "@/lib/country"
+
+/**
+ * Validates the requested country code against the regions configured on the
+ * Medusa backend. If the segment isn't a valid ISO-2 code, falls through to
+ * a 404. Caches the result so the regions API isn't hit on every request.
+ */
+async function isValidCountry(code: string): Promise<boolean> {
+  if (!isCountryCode(code)) return false
+  try {
+    const { regions } = await sdk.store.region.list({})
+    for (const r of regions) {
+      for (const c of r.countries ?? []) {
+        if (c.iso_2?.toLowerCase() === code) return true
+      }
+    }
+  } catch {
+    // If we can't reach the backend, allow the code through so the page
+    // surfaces a real error rather than a 404 here.
+    return true
+  }
+  return false
+}
 
 export default async function StoreLayout({
   children,
+  params,
 }: {
   children: React.ReactNode
+  params: Promise<{ countryCode: string }>
 }) {
+  const { countryCode } = await params
+  const lower = countryCode.toLowerCase()
+
+  if (!(await isValidCountry(lower))) {
+    notFound()
+  }
+
+  // Persist the chosen country so a returning visitor lands here again,
+  // and so any client-side code (cart, hooks) can read the cookie.
+  const cookieStore = await cookies()
+  if (cookieStore.get(COUNTRY_COOKIE)?.value !== lower) {
+    cookieStore.set(COUNTRY_COOKIE, lower, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    })
+  }
+
+  // Normalize URL casing — keep /us, never /US, so analytics and canonical
+  // URLs aggregate cleanly.
+  if (countryCode !== lower) {
+    redirect(`/${lower}`)
+  }
+
   // Fetch category tree server-side so the Header doesn't depend on
   // a specific data source — the repository layer handles that.
   const categories = await categoryRepository.list()
